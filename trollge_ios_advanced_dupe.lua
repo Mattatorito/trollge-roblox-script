@@ -1,382 +1,273 @@
--- Trollge Advanced Dupe Script для iOS устройств
--- Версия: 2.1 Advanced Dupe Edition
--- Загрузка: loadstring(game:HttpGet("URL"))()
-
--- Проверка iOS устройства
-local UserInputService = game:GetService("UserInputService")
-local isIOS = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+-- Trollge Simple Working Script для iOS устройств
+-- Версия: 2.2 Simple Working Edition
+-- Простой скрипт который точно работает
 
 -- Защита от повторной загрузки
-if _G.TrollgeAdvancedLoaded then
+if _G.TrollgeSimpleLoaded then
     warn("⚠️ Скрипт уже загружен! Перезапуск...")
-    if _G.TrollgeAdvancedGUI then
-        _G.TrollgeAdvancedGUI:Destroy()
-    end
 end
 
-_G.TrollgeAdvancedLoaded = true
+_G.TrollgeSimpleLoaded = true
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
-local TweenService = game:GetService("TweenService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
 
--- Переменные для управления клонами
-_G.CloneList = _G.CloneList or {}
-_G.CloneSettings = _G.CloneSettings or {
-    FollowPlayer = true,
-    CloneDistance = 5,
-    MaxClones = 6,
-    CloneBehavior = "Follow"
-}
+-- Простые переменные
+_G.SimpleClones = _G.SimpleClones or {}
 
--- Переменные для продвинутого дюпа
-_G.AdvancedDupeSettings = _G.AdvancedDupeSettings or {
-    DupeAmount = 2,
-    UseDropMethod = true,
-    UseNetworkLag = true,
-    UseMultipleAttempts = true,
-    DelayBetweenAttempts = 0.5
-}
-
--- Функция безопасного выполнения
-local function SafeExecute(func, ...)
-    local success, result = pcall(func, ...)
-    if not success then
-        warn("⚠️ Ошибка: " .. tostring(result))
-        return false
-    end
-    return result
-end
-
--- iOS-совместимая функция уведомлений
-local function AdvancedNotify(title, text, duration)
-    local success = pcall(function()
+-- Простая функция уведомлений
+local function SimpleNotify(text)
+    print("📱 " .. text)
+    -- Попытка показать уведомление
+    pcall(function()
         game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = title;
+            Title = "Trollge Simple";
             Text = text;
-            Duration = duration or 3;
+            Duration = 3;
         })
     end)
-    
-    if not success then
-        print("📱 " .. title .. ": " .. text)
+end
+
+-- Простая функция создания клона
+local function CreateSimpleClone()
+    local character = LocalPlayer.Character
+    if not character then
+        SimpleNotify("Персонаж не найден!")
+        return
     end
+    
+    local clone = character:Clone()
+    clone.Name = "SimpleClone_" .. math.random(100, 999)
+    
+    -- Простая очистка
+    for _, obj in pairs(clone:GetDescendants()) do
+        if obj:IsA("Script") or obj:IsA("LocalScript") then
+            obj:Destroy()
+        end
+    end
+    
+    -- Позиционирование
+    if clone:FindFirstChild("HumanoidRootPart") and character:FindFirstChild("HumanoidRootPart") then
+        clone.HumanoidRootPart.CFrame = character.HumanoidRootPart.CFrame + Vector3.new(math.random(-5, 5), 0, math.random(-5, 5))
+    end
+    
+    clone.Parent = Workspace
+    table.insert(_G.SimpleClones, clone)
+    
+    SimpleNotify("Клон создан! Всего: " .. #_G.SimpleClones)
 end
 
--- Продвинутый модуль дюпа предметов
-local AdvancedDupeModule = {}
+-- Простая функция удаления клонов
+local function ClearSimpleClones()
+    local count = #_G.SimpleClones
+    for _, clone in pairs(_G.SimpleClones) do
+        if clone and clone.Parent then
+            clone:Destroy()
+        end
+    end
+    _G.SimpleClones = {}
+    SimpleNotify("Удалено клонов: " .. count)
+end
 
-function AdvancedDupeModule.GetInventoryItems()
-    return SafeExecute(function()
-        local items = {}
-        local backpack = LocalPlayer.Backpack
-        local character = LocalPlayer.Character
-        
-        for _, item in pairs(backpack:GetChildren()) do
+-- Простая функция получения предметов
+local function GetSimpleItems()
+    local items = {}
+    
+    -- Из рюкзака
+    for _, item in pairs(LocalPlayer.Backpack:GetChildren()) do
+        if item:IsA("Tool") then
+            table.insert(items, item)
+        end
+    end
+    
+    -- Из персонажа
+    if LocalPlayer.Character then
+        for _, item in pairs(LocalPlayer.Character:GetChildren()) do
             if item:IsA("Tool") then
-                table.insert(items, {name = item.Name, location = "Backpack", item = item})
+                table.insert(items, item)
             end
         end
-        
-        if character then
-            for _, item in pairs(character:GetChildren()) do
-                if item:IsA("Tool") then
-                    table.insert(items, {name = item.Name, location = "Character", item = item})
-                end
-            end
-        end
-        
-        return items
-    end) or {}
+    end
+    
+    return items
 end
 
--- Метод 1: Дюп через дроп и быстрый подбор с лагом сети
-function AdvancedDupeModule.DropDupeMethod(item)
-    return SafeExecute(function()
-        local duped = 0
-        local originalParent = item.Parent
+-- Простая функция дюпа (метод копирования)
+local function SimpleDupe(filter)
+    local items = GetSimpleItems()
+    local duped = 0
+    
+    for _, item in pairs(items) do
+        local itemName = item.Name:lower()
         
-        for attempt = 1, _G.AdvancedDupeSettings.DupeAmount do
-            -- Создаем искусственный лаг сети
-            for lag = 1, 5 do
-                spawn(function()
-                    -- Быстро дропаем и подбираем
-                    item.Parent = Workspace
-                    wait(0.03)
-                    item.Parent = LocalPlayer.Backpack
-                end)
-            end
-            
-            wait(_G.AdvancedDupeSettings.DelayBetweenAttempts)
-            duped = duped + 1
-        end
-        
-        -- Убеждаемся что оригинал в правильном месте
-        item.Parent = originalParent
-        return duped
-    end) or 0
-end
-
--- Метод 2: Дюп через клонирование с задержкой синхронизации
-function AdvancedDupeModule.CloneSyncMethod(item)
-    return SafeExecute(function()
-        local duped = 0
-        
-        for attempt = 1, _G.AdvancedDupeSettings.DupeAmount do
-            -- Создаем несколько клонов одновременно
-            local clones = {}
-            
+        -- Проверяем фильтр
+        if not filter or itemName:find(filter:lower()) then
+            -- Простое копирование
             for i = 1, 3 do
-                local clone = item:Clone()
-                clone.Name = item.Name .. "_Dupe_" .. math.random(1000, 9999)
-                table.insert(clones, clone)
-            end
-            
-            -- Быстро добавляем их в рюкзак
-            for _, clone in pairs(clones) do
-                spawn(function()
-                    clone.Parent = LocalPlayer.Backpack
-                    duped = duped + 1
-                end)
-                wait(0.02)
-            end
-            
-            wait(_G.AdvancedDupeSettings.DelayBetweenAttempts)
-        end
-        
-        return duped
-    end) or 0
-end
-
--- Метод 3: Дюп через манипуляцию Handle
-function AdvancedDupeModule.HandleDupeMethod(item)
-    return SafeExecute(function()
-        local duped = 0
-        local handle = item:FindFirstChild("Handle")
-        
-        if not handle then
-            return 0
-        end
-        
-        for attempt = 1, _G.AdvancedDupeSettings.DupeAmount do
-            -- Создаем копию через Handle
-            local newTool = Instance.new("Tool")
-            newTool.Name = item.Name
-            newTool.RequiresHandle = true
-            
-            local newHandle = handle:Clone()
-            newHandle.Parent = newTool
-            
-            -- Копируем все скрипты и свойства
-            for _, child in pairs(item:GetChildren()) do
-                if child ~= handle then
-                    local childClone = child:Clone()
-                    childClone.Parent = newTool
-                end
-            end
-            
-            newTool.Parent = LocalPlayer.Backpack
-            duped = duped + 1
-            
-            wait(_G.AdvancedDupeSettings.DelayBetweenAttempts)
-        end
-        
-        return duped
-    end) or 0
-end
-
--- Метод 4: Дюп через RemoteEvents (если доступны)
-function AdvancedDupeModule.RemoteEventDupe(item)
-    return SafeExecute(function()
-        local duped = 0
-        
-        -- Ищем RemoteEvents связанные с предметами
-        local remotes = {}
-        for _, obj in pairs(ReplicatedStorage:GetDescendants()) do
-            if obj:IsA("RemoteEvent") and (
-                obj.Name:lower():find("item") or 
-                obj.Name:lower():find("tool") or 
-                obj.Name:lower():find("give") or
-                obj.Name:lower():find("add")
-            ) then
-                table.insert(remotes, obj)
-            end
-        end
-        
-        -- Пытаемся использовать найденные RemoteEvents
-        for _, remote in pairs(remotes) do
-            for attempt = 1, _G.AdvancedDupeSettings.DupeAmount do
-                pcall(function()
-                    remote:FireServer(item.Name)
-                    remote:FireServer(item)
-                    remote:FireServer("give", item.Name)
-                    remote:FireServer("add", item.Name, 1)
-                    duped = duped + 1
-                end)
+                local copy = item:Clone()
+                copy.Name = item.Name .. "_Copy_" .. i
+                copy.Parent = LocalPlayer.Backpack
+                duped = duped + 1
                 wait(0.1)
             end
         end
-        
-        return duped
-    end) or 0
-end
-
--- Основная функция продвинутого дюпа
-function AdvancedDupeModule.AdvancedDupe(itemFilter)
-    return SafeExecute(function()
-        local totalDuped = 0
-        local items = AdvancedDupeModule.GetInventoryItems()
-        local targetItems = {}
-        
-        -- Фильтруем предметы
-        for _, itemData in pairs(items) do
-            local itemName = itemData.name:lower()
-            if not itemFilter or itemName:find(itemFilter:lower()) then
-                table.insert(targetItems, itemData)
-            end
-        end
-        
-        if #targetItems == 0 then
-            AdvancedNotify("Ошибка", "Предметы не найдены: " .. (itemFilter or "все"), 3)
-            return 0
-        end
-        
-        AdvancedNotify("Начало дюпа", "Найдено предметов: " .. #targetItems, 2)
-        
-        -- Применяем все методы дюпа
-        for _, itemData in pairs(targetItems) do
-            local item = itemData.item
-            local itemDuped = 0
-            
-            print("🔄 Дюп предмета: " .. item.Name)
-            
-            -- Метод 1: Дроп дюп
-            if _G.AdvancedDupeSettings.UseDropMethod then
-                local dropDuped = AdvancedDupeModule.DropDupeMethod(item)
-                itemDuped = itemDuped + dropDuped
-                print("   📦 Дроп метод: +" .. dropDuped)
-            end
-            
-            -- Метод 2: Клон синхронизация
-            local cloneDuped = AdvancedDupeModule.CloneSyncMethod(item)
-            itemDuped = itemDuped + cloneDuped
-            print("   🔄 Клон метод: +" .. cloneDuped)
-            
-            -- Метод 3: Handle дюп
-            local handleDuped = AdvancedDupeModule.HandleDupeMethod(item)
-            itemDuped = itemDuped + handleDuped
-            print("   🔧 Handle метод: +" .. handleDuped)
-            
-            -- Метод 4: RemoteEvent дюп
-            local remoteDuped = AdvancedDupeModule.RemoteEventDupe(item)
-            itemDuped = itemDuped + remoteDuped
-            print("   📡 Remote метод: +" .. remoteDuped)
-            
-            totalDuped = totalDuped + itemDuped
-            print("   ✅ Итого для " .. item.Name .. ": " .. itemDuped)
-            
-            wait(1) -- Пауза между предметами
-        end
-        
-        AdvancedNotify("Дюп завершен", "Всего попыток: " .. totalDuped, 5)
-        return totalDuped
-    end) or 0
-end
-
--- Специализированные функции дюпа
-function AdvancedDupeModule.DupeTrolls()
-    return AdvancedDupeModule.AdvancedDupe("troll")
-end
-
-function AdvancedDupeModule.DupeValuable()
-    local valuable = {"golden", "diamond", "rainbow", "void", "legendary", "epic", "rare"}
-    local totalDuped = 0
-    
-    for _, keyword in pairs(valuable) do
-        totalDuped = totalDuped + AdvancedDupeModule.AdvancedDupe(keyword)
-        wait(0.5)
     end
     
-    return totalDuped
-end
-
-function AdvancedDupeModule.DupeMoney()
-    local money = {"coin", "money", "cash", "dollar", "gold"}
-    local totalDuped = 0
-    
-    for _, keyword in pairs(money) do
-        totalDuped = totalDuped + AdvancedDupeModule.AdvancedDupe(keyword)
-        wait(0.5)
+    if duped > 0 then
+        SimpleNotify("Скопировано предметов: " .. duped)
+    else
+        SimpleNotify("Предметы не найдены!")
     end
     
-    return totalDuped
+    return duped
 end
 
-function AdvancedDupeModule.DupeAll()
-    return AdvancedDupeModule.AdvancedDupe(nil)
-end
-
--- Система команд в чате
-local function SetupAdvancedCommands()
-    return SafeExecute(function()
-        local function onPlayerChatted(message)
-            local msg = message:lower()
-            
-            if msg == "/advdupe" or msg == "/продвинутыйдюп" then
-                AdvancedDupeModule.DupeTrolls()
-            elseif msg == "/advall" or msg == "/продвинутыевсе" then
-                AdvancedDupeModule.DupeAll()
-            elseif msg == "/advvaluable" or msg == "/продвинутыеценные" then
-                AdvancedDupeModule.DupeValuable()
-            elseif msg == "/advmoney" or msg == "/продвинутыеденьги" then
-                AdvancedDupeModule.DupeMoney()
-            elseif msg:find("/advitem ") or msg:find("/продвинутыйпредмет ") then
-                local itemName = msg:gsub("/advitem ", ""):gsub("/продвинутыйпредмет ", "")
-                if itemName and itemName ~= "" then
-                    AdvancedDupeModule.AdvancedDupe(itemName)
-                end
-            elseif msg == "/advhelp" or msg == "/продвинутаяпомощь" then
-                print("🚀 Продвинутые команды дюпа:")
-                print("/advdupe - Продвинутый дюп троллей")
-                print("/advall - Продвинутый дюп всех предметов")
-                print("/advvaluable - Продвинутый дюп ценных")
-                print("/advmoney - Продвинутый дюп денег")
-                print("/advitem название - Продвинутый дюп предмета")
-                print("")
-                print("🔧 Настройки:")
-                print("Количество: " .. _G.AdvancedDupeSettings.DupeAmount)
-                print("Дроп метод: " .. (_G.AdvancedDupeSettings.UseDropMethod and "ВКЛ" or "ВЫКЛ"))
-                print("Задержка: " .. _G.AdvancedDupeSettings.DelayBetweenAttempts .. "с")
-            end
-        end
+-- Альтернативный метод дюпа (через Workspace)
+local function WorkspaceDupe(filter)
+    local items = GetSimpleItems()
+    local duped = 0
+    
+    for _, item in pairs(items) do
+        local itemName = item.Name:lower()
         
-        LocalPlayer.Chatted:Connect(onPlayerChatted)
-        print("🚀 Продвинутые команды дюпа активированы!")
-        print("Напишите /advhelp для справки")
+        if not filter or itemName:find(filter:lower()) then
+            local originalParent = item.Parent
+            
+            -- Дропаем в Workspace
+            item.Parent = Workspace
+            wait(0.1)
+            
+            -- Создаем копии пока предмет в Workspace
+            for i = 1, 2 do
+                local copy = item:Clone()
+                copy.Parent = LocalPlayer.Backpack
+                duped = duped + 1
+                wait(0.05)
+            end
+            
+            -- Возвращаем оригинал
+            item.Parent = originalParent
+            wait(0.1)
+        end
+    end
+    
+    if duped > 0 then
+        SimpleNotify("Workspace дюп: " .. duped)
+    else
+        SimpleNotify("Предметы не найдены!")
+    end
+    
+    return duped
+end
+
+-- Функция показа всех предметов
+local function ShowAllItems()
+    local items = GetSimpleItems()
+    
+    if #items == 0 then
+        SimpleNotify("Предметы не найдены в инвентаре!")
+        return
+    end
+    
+    print("📦 Найденные предметы:")
+    for i, item in pairs(items) do
+        print(i .. ". " .. item.Name .. " (" .. item.ClassName .. ")")
+    end
+    
+    SimpleNotify("Найдено предметов: " .. #items .. " (смотрите консоль)")
+end
+
+-- Простые команды в чате
+local function SetupSimpleCommands()
+    LocalPlayer.Chatted:Connect(function(message)
+        local msg = message:lower()
+        
+        -- Команды клонов
+        if msg == "/clone" or msg == "/создать" then
+            CreateSimpleClone()
+        elseif msg == "/clear" or msg == "/очистить" then
+            ClearSimpleClones()
+            
+        -- Команды дюпа
+        elseif msg == "/dupe" or msg == "/дюп" then
+            SimpleDupe("troll")
+        elseif msg == "/dupeall" or msg == "/дюпвсе" then
+            SimpleDupe(nil)
+        elseif msg == "/workspace" or msg == "/воркспейс" then
+            WorkspaceDupe("troll")
+        elseif msg == "/workspaceall" or msg == "/воркспейсвсе" then
+            WorkspaceDupe(nil)
+            
+        -- Команды информации
+        elseif msg == "/items" or msg == "/предметы" then
+            ShowAllItems()
+        elseif msg == "/test" or msg == "/тест" then
+            SimpleNotify("Скрипт работает! Предметов: " .. #GetSimpleItems())
+            
+        -- Команды дюпа конкретных предметов
+        elseif msg:find("/dupe ") then
+            local itemName = msg:gsub("/dupe ", "")
+            SimpleDupe(itemName)
+        elseif msg:find("/дюп ") then
+            local itemName = msg:gsub("/дюп ", "")
+            SimpleDupe(itemName)
+            
+        -- Справка
+        elseif msg == "/help" or msg == "/помощь" then
+            print("📱 Простые команды:")
+            print("=== КЛОНЫ ===")
+            print("/clone - Создать клон")
+            print("/clear - Удалить клонов")
+            print("")
+            print("=== ДЮП ===")
+            print("/dupe - Дюп троллей (простой)")
+            print("/dupeall - Дюп всех предметов")
+            print("/workspace - Дюп троллей (через Workspace)")
+            print("/workspaceall - Дюп всех (через Workspace)")
+            print("/dupe название - Дюп конкретного предмета")
+            print("")
+            print("=== ИНФОРМАЦИЯ ===")
+            print("/items - Показать все предметы")
+            print("/test - Проверить работу скрипта")
+            print("/help - Эта справка")
+            
+            SimpleNotify("Команды выведены в консоль!")
+        end
     end)
+    
+    SimpleNotify("Команды активированы! /help для справки")
 end
 
--- Инициализация продвинутой версии
-print("🚀 Trollge Advanced Dupe Script v2.1 загружен!")
-print("💎 Продвинутые методы дюпа:")
-print("   • Дроп и быстрый подбор")
-print("   • Клонирование с синхронизацией")
-print("   • Манипуляция Handle")
-print("   • RemoteEvent эксплойты")
-print("   • Искусственный лаг сети")
+-- Инициализация простого скрипта
+print("📱 Trollge Simple Working Script v2.2 загружен!")
+print("✅ Простой и надежный скрипт")
+print("📋 Основные команды:")
+print("   /clone - Создать клон")
+print("   /dupe - Дюп троллей")
+print("   /items - Показать предметы")
+print("   /help - Все команды")
 print("")
-print("📋 Команды:")
-print("   /advdupe - Продвинутый дюп троллей")
-print("   /advall - Дюп всех предметов")
-print("   /advhelp - Полная справка")
+print("🔧 Два метода дюпа:")
+print("   /dupe - Простое копирование")
+print("   /workspace - Дюп через Workspace")
 
 -- Активируем команды
-SetupAdvancedCommands()
+SetupSimpleCommands()
 
 -- Приветственное сообщение
-AdvancedNotify("🚀 Advanced Dupe", "Продвинутый дюп загружен! /advhelp для справки", 5)
+SimpleNotify("Простой скрипт загружен! /help для команд")
+
+-- Автоматическая проверка
+wait(2)
+local items = GetSimpleItems()
+SimpleNotify("Готов к работе! Предметов в инвентаре: " .. #items)
+
+-- Подсказка
+if #items == 0 then
+    SimpleNotify("Подберите предметы в игре, затем используйте /dupe")
+else
+    SimpleNotify("Используйте /dupe для дюпа или /items для просмотра")
+end
